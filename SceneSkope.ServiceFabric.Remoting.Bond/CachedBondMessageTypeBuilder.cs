@@ -30,13 +30,13 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
             public int GetHashCode(IList<Type> obj) => obj.GetHashCode();
         }
 
-        private static ImmutableDictionary<Type, Type> _responseTypeMap = ImmutableDictionary<Type, Type>.Empty;
-        private static ImmutableDictionary<IList<Type>, Type> _requestTypeMap = ImmutableDictionary<IList<Type>, Type>.Empty.WithComparers(new ListTypeComparer());
+        private static ImmutableDictionary<Type, Type> s_responseTypeMap = ImmutableDictionary<Type, Type>.Empty;
+        private static ImmutableDictionary<IList<Type>, Type> s_requestTypeMap = ImmutableDictionary<IList<Type>, Type>.Empty.WithComparers(new ListTypeComparer());
 
         public static Type GetOrAddResponseType(Type responseType) =>
-            ImmutableInterlocked.GetOrAdd(ref _responseTypeMap, responseType, BondMessageTypeBuilder.CreateResponseMessageBody);
+            ImmutableInterlocked.GetOrAdd(ref s_responseTypeMap, responseType, BondMessageTypeBuilder.CreateResponseMessageBody);
 
         public static Type GetOrAddRequestType(IList<Type> requestTypes) =>
-            ImmutableInterlocked.GetOrAdd(ref _requestTypeMap, requestTypes, BondMessageTypeBuilder.CreateRequestMessageBody);
+            ImmutableInterlocked.GetOrAdd(ref s_requestTypeMap, requestTypes, BondMessageTypeBuilder.CreateRequestMessageBody);
     }
 }

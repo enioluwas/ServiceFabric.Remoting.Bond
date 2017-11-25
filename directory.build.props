@@ -19,6 +19,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup Condition="'$(IsTestProject)' != 'true' and '$(IsPackable)' != 'false'">
-    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.4.0" PrivateAssets="All" />
+    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.6.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>

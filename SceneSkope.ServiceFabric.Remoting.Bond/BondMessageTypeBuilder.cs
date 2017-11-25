@@ -12,15 +12,28 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
 {
     public static class BondMessageTypeBuilder
     {
-        private const string _namespace = "generated";
+        private static readonly Dictionary<string, Assembly> s_generatedAssemblies = new Dictionary<string, Assembly>();
+        static BondMessageTypeBuilder()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+        }
+
+        private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            s_generatedAssemblies.TryGetValue(args.Name, out var assembly);
+            return assembly;
+        }
+
         private static int _id = 0;
 
         public static Type CreateResponseMessageBody(Type responseType)
         {
-            var typeBuilder = CreateBuilder();
+            var module = CreateModule(out var name);
+            var typeAliasConverterBuilder = CreateTypeAliasBuilder(name, module);
+            var typeBuilder = CreateBuilder(name, module);
 
             var parameterTypes = new[] { responseType };
-            CreateProperties(typeBuilder, parameterTypes, out var fields, out var setters, out var getters);
+            CreateProperties(typeBuilder, typeAliasConverterBuilder, parameterTypes, out var fields, out var setters, out var getters);
 
             CreateDefaultConstructor(typeBuilder);
             CreateFullConstructor(typeBuilder, parameterTypes, fields);
@@ -30,6 +43,7 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
             BuildSet(responseType, typeBuilder, fields);
             BuildGet(responseType, typeBuilder, fields);
 
+            typeAliasConverterBuilder.CreateType();
             return typeBuilder.CreateType();
         }
 
@@ -68,10 +82,12 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
 
         public static Type CreateRequestMessageBody(IEnumerable<Type> propertyTypes)
         {
-            var typeBuilder = CreateBuilder();
+            var module = CreateModule(out var name);
+            var typeAliasConverterBuilder = CreateTypeAliasBuilder(name, module);
+            var typeBuilder = CreateBuilder(name, module);
 
             var parameterTypes = propertyTypes.ToArray();
-            CreateProperties(typeBuilder, parameterTypes, out var fields, out var setters, out var getters);
+            CreateProperties(typeBuilder, typeAliasConverterBuilder, parameterTypes, out var fields, out var setters, out var getters);
 
             CreateDefaultConstructor(typeBuilder);
             CreateFullConstructor(typeBuilder, parameterTypes, fields);
@@ -81,6 +97,7 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
             BuildSetParameter(typeBuilder, parameterTypes, fields);
             BuildGetParameter(typeBuilder, parameterTypes, fields);
 
+            typeAliasConverterBuilder.CreateType();
             return typeBuilder.CreateType();
         }
 
@@ -157,32 +174,49 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
 
         public static Type CreateObject(IEnumerable<Type> propertyTypes)
         {
-            var typeBuilder = CreateBuilder();
+            var module = CreateModule(out var name);
+            var typeAliasConverterBuilder = CreateTypeAliasBuilder(name, module);
+            var typeBuilder = CreateBuilder(name, module);
 
             var parameterTypes = propertyTypes.ToArray();
-            CreateProperties(typeBuilder, parameterTypes, out var fields, out var setters, out var getters);
+            CreateProperties(typeBuilder, typeAliasConverterBuilder, parameterTypes, out var fields, out var setters, out var getters);
 
             CreateDefaultConstructor(typeBuilder);
             CreateFullConstructor(typeBuilder, parameterTypes, fields);
             CreateObjectConstructor(typeBuilder, parameterTypes, fields);
-
-            return typeBuilder.CreateType();
+            typeAliasConverterBuilder.CreateType();
+            var type = typeBuilder.CreateType();
+            s_generatedAssemblies.Add(type.Assembly.FullName, type.Assembly);
+            return type;
         }
 
-        private static TypeBuilder CreateBuilder()
+        private static ModuleBuilder CreateModule(out string name)
         {
             var id = Interlocked.Increment(ref _id);
-            var name = $"generated_{id}";
+            name = $"generated_{id}";
             var asm = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.Run);
 
-            var module = asm.DefineDynamicModule("module");
+            return asm.DefineDynamicModule("module");
+        }
 
-            var typeBuilder = module.DefineType($"{_namespace}.{name}");
+        private static TypeBuilder CreateTypeAliasBuilder(string name, ModuleBuilder module)
+        {
+            var ns = $"{name}_namespace";
+            return module.DefineType($"{ns}.BondTypeAliasConverter",
+                TypeAttributes.Class | TypeAttributes.Sealed | TypeAttributes.Abstract | TypeAttributes.Public);
+        }
+
+
+        private static TypeBuilder CreateBuilder(string name, ModuleBuilder module)
+        {
+            var ns = $"{name}_namespace";
+            var typeBuilder = module.DefineType($"{ns}.{name}");
             typeBuilder.SetCustomAttribute(new CustomAttributeBuilder(typeof(SchemaAttribute).GetConstructor(Type.EmptyTypes), Array.Empty<object>()));
             return typeBuilder;
         }
 
-        private static FieldBuilder[] CreateProperties(TypeBuilder typeBuilder, Type[] parameterTypes, out FieldBuilder[] fields, out MethodBuilder[] setters, out MethodBuilder[] getters)
+        private static FieldBuilder[] CreateProperties(TypeBuilder typeBuilder, TypeBuilder typeAliasConverterBuilder,
+            Type[] parameterTypes, out FieldBuilder[] fields, out MethodBuilder[] setters, out MethodBuilder[] getters)
         {
             fields = new FieldBuilder[parameterTypes.Length];
             setters = new MethodBuilder[parameterTypes.Length];
@@ -193,47 +227,21 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
                 var backingField = typeBuilder.DefineField($"_{index}", propertyType, FieldAttributes.Private);
                 fields[index] = backingField;
 
-                Type bondPropertyType;
-                if (TryFindBondTypeAliasConverter(propertyType, out var convertFromTransport, out var convertToTransport))
-                {
-                    bondPropertyType = convertToTransport.ReturnType;
-                }
-                else
-                {
-                    bondPropertyType = propertyType;
-                }
+                var property = typeBuilder.DefineProperty($"{index}", PropertyAttributes.HasDefault, propertyType, null);
 
-                var property = typeBuilder.DefineProperty($"{index}", PropertyAttributes.HasDefault, bondPropertyType, null);
-
-                var getter = Emit.BuildInstanceMethod(bondPropertyType, Type.EmptyTypes, typeBuilder, $"get_{index}",
+                var getter = Emit.BuildInstanceMethod(propertyType, Type.EmptyTypes, typeBuilder, $"get_{index}",
                     MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig);
                 getter.LoadArgument(0);
                 getter.LoadField(backingField);
-                if (convertToTransport != null)
-                {
-                    using (var local = getter.DeclareLocal(bondPropertyType))
-                    {
-                        getter.LoadLocal(local);
-                        getter.Call(convertToTransport);
-                    }
-                }
                 getter.Return();
                 var getterMethod = getter.CreateMethod();
                 property.SetGetMethod(getterMethod);
                 getters[index] = getterMethod;
 
-                var setter = Emit.BuildInstanceMethod(typeof(void), new[] { bondPropertyType }, typeBuilder, $"set_{index}",
+                var setter = Emit.BuildInstanceMethod(typeof(void), new[] { propertyType }, typeBuilder, $"set_{index}",
                     MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig);
                 setter.LoadArgument(0);
                 setter.LoadArgument(1);
-                if (convertFromTransport != null)
-                {
-                    using (var local = setter.DeclareLocal(propertyType))
-                    {
-                        setter.LoadLocal(local);
-                        setter.Call(convertFromTransport);
-                    }
-                }
                 setter.StoreField(backingField);
                 setter.Return();
                 var setterMethod = setter.CreateMethod();
@@ -241,10 +249,35 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
                 setters[index] = setterMethod;
 
                 property.SetCustomAttribute(new CustomAttributeBuilder(typeof(RequiredAttribute).GetConstructor(Type.EmptyTypes), Array.Empty<object>()));
-                property.SetCustomAttribute(new CustomAttributeBuilder(typeof(IdAttribute).GetConstructor(new[] { typeof(ushort) }), new object[] { (ushort)index }));
+                property.SetCustomAttribute(new CustomAttributeBuilder(typeof(IdAttribute).GetConstructor(new[] { typeof(ushort) }),
+                    new object[] { (ushort)index }));
+
+                if (TryFindBondTypeAliasConverter(propertyType, out var convertFromTransport, out var convertToTransport))
+                {
+                    var bondPropertyType = convertToTransport.ReturnType;
+                    var bondSerializedType = bondPropertyType == typeof(ArraySegment<byte>) ? typeof(global::Bond.Tag.blob) : bondPropertyType;
+                    property.SetCustomAttribute(new CustomAttributeBuilder(typeof(TypeAttribute).GetConstructor(new[] { typeof(Type) }),
+                        new object[] { bondSerializedType }));
+                    BuildBondTypeAliasConverter(typeAliasConverterBuilder, convertFromTransport);
+                    BuildBondTypeAliasConverter(typeAliasConverterBuilder, convertToTransport);
+                }
             }
 
             return fields;
+        }
+
+        private static void BuildBondTypeAliasConverter(TypeBuilder typeBuilder, MethodInfo converter)
+        {
+            var method = Emit.BuildStaticMethod(converter.ReturnType,
+                converter.GetParameters().Select(p => p.ParameterType).ToArray(),
+                 typeBuilder,
+                 converter.Name,
+                 MethodAttributes.Public);
+            method.LoadArgument(0);
+            method.LoadArgument(1);
+            method.Call(converter);
+            method.Return();
+            method.CreateMethod();
         }
 
         private static void CreateDefaultConstructor(TypeBuilder typeBuilder)
@@ -297,13 +330,14 @@ namespace SceneSkope.ServiceFabric.Remoting.Bond
 
         private static bool TryFindBondTypeAliasConverter(Type propertyType, out MethodInfo convertFromTransport, out MethodInfo convertToTransport)
         {
-            if (propertyType.IsPrimitive)
+            if (propertyType.IsPrimitive || propertyType == typeof(ArraySegment<byte>))
             {
                 convertFromTransport = null;
                 convertToTransport = null;
                 return false;
             }
-            var name = propertyType.Namespace + ".BondTypeAliasConverter" + propertyType.AssemblyQualifiedName.Substring(propertyType.Name.Length);
+            var name = propertyType.Namespace + ".BondTypeAliasConverter" +
+                propertyType.AssemblyQualifiedName.Substring(propertyType.FullName.Length);
             var converterType = propertyType.Assembly.GetType(name, false);
             if (converterType != null)
             {
