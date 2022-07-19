@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>ServiceFabric.Bond.Remoting</AssemblyName>
+    <RootNamespace>Microsoft.ServiceFabric.Services.Remoting.V2.Bond</RootNamespace>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bond.Core.CSharp" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" />
+    <PackageReference Include="Sigil"/>
+  </ItemGroup>
+
+</Project>

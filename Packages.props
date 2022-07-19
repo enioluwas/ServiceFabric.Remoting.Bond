@@ -1,0 +1,18 @@
+<!--
+  This file manages Versions of PackageReference items.  More information is available here:
+  https://github.com/microsoft/MSBuildSdks/blob/master/src/CentralPackageVersions/README.md
+-->
+<Project>
+  <ItemGroup Label="Package Versions used by this repository">
+    <PackageReference Update="Bond.Core.CSharp" Version="9.0.5" />
+    <PackageReference Update="Microsoft.ServiceFabric.Services.Remoting" Version="4.2.445" />
+    <PackageReference Update="Sigil" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Packages to add to all projects">
+    <!--
+      To reference a package in all projects, add it to this list.  Be sure to specify also specify a PackageVersion above.
+    -->
+    <GlobalPackageReference Include="Roslynator.Analyzers" Version="[4.1.1]" />
+  </ItemGroup>
+</Project>

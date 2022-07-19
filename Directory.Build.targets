@@ -1,0 +1,6 @@
+<!--
+  This file is imported by any project that imports Microsoft.Common.targets
+-->
+<Project>
+  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.1.3" />
+</Project>
