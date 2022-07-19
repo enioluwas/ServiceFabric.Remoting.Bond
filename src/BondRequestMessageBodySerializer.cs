@@ -1,5 +1,5 @@
 ﻿// --------------------------------------------------------------------------------
-// <copyright file="RemotingRequestBondMessageBodySerializer.cs" company="Microsoft Corporation">
+// <copyright file="BondRequestMessageBodySerializer.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 // --------------------------------------------------------------------------------
@@ -17,14 +17,14 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
     using System.Collections.Generic;
     using System.Linq;
 
-    internal class RemotingRequestBondMessageBodySerializer : IServiceRemotingRequestMessageBodySerializer
+    internal class BondRequestMessageBodySerializer : IServiceRemotingRequestMessageBodySerializer
     {
         private static readonly ConcurrentDictionary<Type[], BondGeneratedRequestType> GeneratedRequestTypeCache = new ConcurrentDictionary<Type[], BondGeneratedRequestType>();
         private readonly BondGeneratedRequestType generatedRequestType;
         private readonly Serializer<CompactBinaryWriter<OutputBuffer>> serializer;
         private readonly Deserializer<CompactBinaryReader<InputStream>> deserializer;
 
-        public RemotingRequestBondMessageBodySerializer(IEnumerable<Type> requestBodyTypes)
+        public BondRequestMessageBodySerializer(IEnumerable<Type> requestBodyTypes)
         {
             if (!requestBodyTypes.Any())
             {

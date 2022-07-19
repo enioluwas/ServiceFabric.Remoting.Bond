@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
+using Sigil.NonGeneric;
 
 namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 {
@@ -12,26 +13,36 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             var propBuilder = typeBuilder.DefineProperty(propName, PropertyAttributes.HasDefault, propType, null);
 
             // Define the "get" accessor method for the property.
-            var getterMethodBuilder = typeBuilder.DefineMethod($"get_{propName}", Constants.PropertyMethodAttributes, propType, Type.EmptyTypes);
-            var getterMethodIL = getterMethodBuilder.GetILGenerator();
-            getterMethodIL.Emit(OpCodes.Ldarg_0);
-            getterMethodIL.Emit(OpCodes.Ldfld, backingFieldBuilder);
-            getterMethodIL.Emit(OpCodes.Ret);
+            var getterMethod = Emit.BuildInstanceMethod(
+                propType,
+                Type.EmptyTypes,
+                typeBuilder,
+                $"get_{propName}",
+                Constants.PropertyMethodAttributes);
+            getterMethod.LoadArgument(0);
+            getterMethod.LoadField(backingFieldBuilder);
+            getterMethod.Return();
+            var getterMethodBuilder = getterMethod.CreateMethod();
 
             // Define the "set" accessor method for the property.
-            var setterMethodBuilder = typeBuilder.DefineMethod($"set_{propName}", Constants.PropertyMethodAttributes, null, new[] { propType });
-            ILGenerator setterMethodIL = setterMethodBuilder.GetILGenerator();
-            setterMethodIL.Emit(OpCodes.Ldarg_0);
-            setterMethodIL.Emit(OpCodes.Ldarg_1);
-            setterMethodIL.Emit(OpCodes.Stfld, backingFieldBuilder);
-            setterMethodIL.Emit(OpCodes.Ret);
+            var setterMethod = Emit.BuildInstanceMethod(
+                typeof(void),
+                new[] { propType },
+                typeBuilder,
+                $"set_{propName}",
+                Constants.PropertyMethodAttributes);
+            setterMethod.LoadArgument(0);
+            setterMethod.LoadArgument(1);
+            setterMethod.StoreField(backingFieldBuilder);
+            setterMethod.Return();
+            var setterMethodBuilder = setterMethod.CreateMethod();
 
             propBuilder.SetGetMethod(getterMethodBuilder);
             propBuilder.SetSetMethod(setterMethodBuilder);
 
             // Add Bond.Id and Bond.Required attributes.
-            propBuilder.SetCustomAttribute(new CustomAttributeBuilder(Constants.BondRequiredAttributeConstructor, null));
-            propBuilder.SetCustomAttribute(new CustomAttributeBuilder(Constants.BondIdAttributeConstructor, new object[] { propBondId }));
+            propBuilder.SetCustomAttribute(new CustomAttributeBuilder(Constants.BondRequiredAttributeConstructor, Array.Empty<object>()));
+            propBuilder.SetCustomAttribute(new CustomAttributeBuilder(Constants.BondIdAttributeConstructor, new object[] { (ushort)propBondId }));
             return backingFieldBuilder;
         }
     }

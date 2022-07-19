@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading;
+using Sigil.NonGeneric;
 
 namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 {
@@ -17,15 +18,12 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
         public static BondRequestMessageBodyTypeGenerator Instance = new BondRequestMessageBodyTypeGenerator();
 
         private readonly CustomAttributeBuilder bondSchemaCustomAttribute;
-        private readonly MethodAttributes propMethodAttributes;
         private readonly MethodInfo requestGetParameterMethod;
         private readonly MethodInfo requestSetParameterMethod;
 
-        // TODO: Pass request type array instead of using new ones
         private BondRequestMessageBodyTypeGenerator()
         {
-            this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, null);
-            this.propMethodAttributes = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, Array.Empty<object>());
             this.requestGetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.GetParameter));
             this.requestSetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.SetParameter));
         }
@@ -35,16 +33,17 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             var typeBuilder = Constants.GeneratedModuleBuilder.DefineType(this.GenerateTypeName(requestTypes));
             typeBuilder.SetCustomAttribute(this.bondSchemaCustomAttribute);
             var generatedFields = this.AddBondProperties(typeBuilder, requestTypes);
-            var generatedConstructors = this.AddConstructors(typeBuilder, generatedFields);
+            this.AddConstructors(typeBuilder, requestTypes, generatedFields);
             this.AddRequestInterfaceDefinition(typeBuilder, generatedFields);
             var generatedType = typeBuilder.CreateType();
-            var typeInstanceFactory = this.BuildInstanceFactory(generatedConstructors, generatedFields);
+            var typeInstanceFactory = this.BuildInstanceFactory(generatedType, generatedFields);
             return new BondGeneratedRequestType { Type = generatedType, InstanceFactory = typeInstanceFactory };
         }
 
-        private Func<IServiceRemotingRequestMessageBody, object> BuildInstanceFactory(GeneratedConstructors constructors, FieldBuilder[] generatedFields)
+        private Func<IServiceRemotingRequestMessageBody, object> BuildInstanceFactory(Type generatedType, FieldBuilder[] generatedFields)
         {
             var request = Expression.Parameter(typeof(IServiceRemotingRequestMessageBody), "request");
+            var generatedTypeConstructor = generatedType.GetConstructor(Enumerable.Repeat(typeof(object), generatedFields.Length).ToArray());
 
             var fieldGetters = new MethodCallExpression[generatedFields.Length];
             for (int i = 0; i < generatedFields.Length; i++)
@@ -54,13 +53,13 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
                     request,
                     this.requestGetParameterMethod,
                     Expression.Constant(i),
-                    Expression.Constant(null),
+                    Expression.Constant(string.Empty, typeof(string)),
                     Expression.Constant(typeof(void), typeof(Type)));
             }
 
             // Generate a lambda like (request) => new Generated(request.GetParameter(1, null, typeof(void)), ... request.GetParameter(n, null, typeof(void)))
             var result = Expression.Lambda<Func<IServiceRemotingRequestMessageBody, object>>(
-                Expression.New(constructors.Untyped, fieldGetters),
+                Expression.New(generatedTypeConstructor, fieldGetters),
                 request);
             return result.Compile();
         }
@@ -74,29 +73,86 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 
         private void AddRequestGetParameterMethod(TypeBuilder typeBuilder, FieldBuilder[] generatedFields)
         {
-            var getterMethodBuilder = typeBuilder.DefineMethod(
-                name: this.requestGetParameterMethod.Name,
-                attributes: MethodAttributes.Public,
+            var getterMethod = Emit.BuildInstanceMethod(
                 returnType: typeof(object),
-                parameterTypes: new[] { typeof(int), typeof(string), typeof(Type) });
+                parameterTypes: new[] { typeof(int), typeof(string), typeof(Type) },
+                typeBuilder,
+                this.requestGetParameterMethod.Name,
+                MethodAttributes.Public | MethodAttributes.Virtual);
 
-            var getterMethodIL = getterMethodBuilder.GetILGenerator();
-
-            var labels = new Label[generatedFields.Length];
-            for (int i = 0; i < labels.Length; i++)
+            var labels = new Sigil.Label[generatedFields.Length];
+            for (var i = 0; i < labels.Length; i++)
             {
-                labels[i] = getterMethodIL.DefineLabel();
+                labels[i] = getterMethod.DefineLabel();
             }
 
-            getterMethodIL.Emit(OpCodes.Ldarg_1);
-            getterMethodIL.Emit(OpCodes.Switch, labels);
-            getterMethodIL.Emit(OpCodes.Ldarg_2);
+            getterMethod.LoadArgument(1);
+            getterMethod.Switch(labels);
+            getterMethod.LoadArgument(2);
+            getterMethod.NewObject<ArgumentOutOfRangeException, string>();
+            getterMethod.Throw();
 
+            for (var i = 0; i < generatedFields.Length; i++)
+            {
+                getterMethod.MarkLabel(labels[i]);
+                getterMethod.LoadArgument(0);
+                getterMethod.LoadField(generatedFields[i]);
+
+                var fieldType = generatedFields[i].FieldType;
+                if (!fieldType.IsClass)
+                {
+                    getterMethod.Box(fieldType);
+                }
+                getterMethod.Return();
+            }
+
+            var getterMethodBuilder = getterMethod.CreateMethod();
+            typeBuilder.DefineMethodOverride(getterMethodBuilder, this.requestGetParameterMethod);
         }
 
         private void AddRequestSetParameterMethod(TypeBuilder typeBuilder, FieldBuilder[] generatedFields)
         {
-            throw new NotImplementedException();
+            var setterMethod = Emit.BuildInstanceMethod(
+                returnType: typeof(void),
+                parameterTypes: new[] { typeof(int), typeof(string), typeof(object) },
+                typeBuilder,
+                this.requestSetParameterMethod.Name,
+                MethodAttributes.Public | MethodAttributes.Virtual);
+
+            var generatedFieldLabels = new Sigil.Label[generatedFields.Length];
+            for (var i = 0; i < generatedFieldLabels.Length; i++)
+            {
+                generatedFieldLabels[i] = setterMethod.DefineLabel();
+            }
+
+            setterMethod.LoadArgument(1);
+            setterMethod.Switch(generatedFieldLabels);
+            setterMethod.LoadArgument(2);
+            setterMethod.NewObject<ArgumentOutOfRangeException, string>();
+            setterMethod.Throw();
+
+            for (var i = 0; i < generatedFields.Length; i++)
+            {
+                setterMethod.MarkLabel(generatedFieldLabels[i]);
+                setterMethod.LoadArgument(0);
+                setterMethod.LoadArgument(3);
+
+                var fieldType = generatedFields[i].FieldType;
+                if (!fieldType.IsClass)
+                {
+                    setterMethod.UnboxAny(fieldType);
+                }
+                else if (fieldType != typeof(object))
+                {
+                    setterMethod.CastClass(fieldType);
+                }
+
+                setterMethod.StoreField(generatedFields[i]);
+                setterMethod.Return();
+            }
+
+            var setterMethodBuilder = setterMethod.CreateMethod();
+            typeBuilder.DefineMethodOverride(setterMethodBuilder, this.requestSetParameterMethod);
         }
 
         private string GenerateTypeName(Type[] requestTypes)
@@ -138,57 +194,48 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             return backingFields;
         }
 
-        private GeneratedConstructors AddConstructors(TypeBuilder typeBuilder, FieldBuilder[] generatedFields)
+        private void AddConstructors(TypeBuilder typeBuilder, Type[] requestTypes, FieldBuilder[] generatedFields)
         {
             // Add typed parameter constructor: new Generated(RequestType1 param1, ..., RequestTypeN paramN)
-            var typedConstructorBuilder = typeBuilder.DefineConstructor(
-                MethodAttributes.Public,
-                CallingConventions.Standard,
-                generatedFields.Select(f => f.FieldType).ToArray());
-
-            var typedConstructorIL = typedConstructorBuilder.GetILGenerator();
+            var typedConstructor = Emit.BuildConstructor(requestTypes, typeBuilder, MethodAttributes.Public);
             for (int i = 0; i < generatedFields.Length; i++)
             {
-                typedConstructorIL.Emit(OpCodes.Ldarg_0);
-                typedConstructorIL.Emit(OpCodes.Ldarg_S, (ushort)i);
-                typedConstructorIL.Emit(OpCodes.Stfld, generatedFields[i]);
-                typedConstructorIL.Emit(OpCodes.Ret);
+                typedConstructor.LoadArgument(0);
+                typedConstructor.LoadArgument((ushort)(i + 1));
+                typedConstructor.StoreField(generatedFields[i]);
             }
 
-            // Add untyped parameter constructor: new Generated(object param1, ..., object paramN)
-            var untypedConstructorBuilder = typeBuilder.DefineConstructor(
-                MethodAttributes.Public,
-                CallingConventions.Standard,
-                generatedFields.Select(_ => typeof(object)).ToArray());
+            typedConstructor.Return();
+            typedConstructor.CreateConstructor();
 
-            var untypedConstructorIL = typedConstructorBuilder.GetILGenerator();
+            // Add untyped parameter constructor: new Generated(object param1, ..., object paramN)
+            var untypedConstructor = Emit.BuildConstructor(
+                generatedFields.Select(_ => typeof(object)).ToArray(),
+                typeBuilder,
+                MethodAttributes.Public);
+
             for (int i = 0; i < generatedFields.Length; i++)
             {
                 var fieldType = generatedFields[i].FieldType;
 
-                untypedConstructorIL.Emit(OpCodes.Ldarg_0);
-                untypedConstructorIL.Emit(OpCodes.Ldarg_1);
+                untypedConstructor.LoadArgument(0);
+                untypedConstructor.LoadArgument((ushort)(i + 1));
                 if (!fieldType.IsClass)
                 {
-                    untypedConstructorIL.Emit(OpCodes.Unbox_Any, fieldType);
+                    untypedConstructor.UnboxAny(fieldType);
                 }
                 else if (fieldType != typeof(object))
                 {
-                    untypedConstructorIL.Emit(OpCodes.Castclass, fieldType);
+                    untypedConstructor.CastClass(fieldType);
                 }
-                untypedConstructorIL.Emit(OpCodes.Stfld, generatedFields[i]);
-                untypedConstructorIL.Emit(OpCodes.Ret);
+                untypedConstructor.StoreField(generatedFields[i]);
             }
 
-            // Add parameterless constructor: new Generated()
-            var parameterlessConstructorBuilder = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
+            untypedConstructor.Return();
+            untypedConstructor.CreateConstructor();
 
-            return new GeneratedConstructors
-            {
-                Parameterless = parameterlessConstructorBuilder,
-                Typed = typedConstructorBuilder,
-                Untyped = untypedConstructorBuilder,
-            };
+            // Add parameterless constructor: new Generated()
+            typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
         }
     }
 }

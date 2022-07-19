@@ -20,8 +20,8 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
         {
             GeneratedAssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(GeneratedAssemblyName), AssemblyBuilderAccess.Run);
             GeneratedModuleBuilder = GeneratedAssemblyBuilder.DefineDynamicModule(GeneratedAssemblyName);
-            BondIdAttributeConstructor = typeof(IdAttribute).GetConstructor(new[] { typeof(int) });
-            BondSchemaAttributeConstructor = typeof(SchemaAttribute).GetConstructor(Type.EmptyTypes);
+            BondIdAttributeConstructor = typeof(IdAttribute).GetConstructor(new[] { typeof(ushort) });
+            BondRequiredAttributeConstructor = typeof(RequiredAttribute).GetConstructor(Type.EmptyTypes);
             BondSchemaAttributeConstructor = typeof(SchemaAttribute).GetConstructor(Type.EmptyTypes);
         }
     }

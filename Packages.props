@@ -5,6 +5,10 @@
 <Project>
   <ItemGroup Label="Package Versions used by this repository">
     <PackageReference Update="Bond.Core.CSharp" Version="9.0.5" />
+    <PackageReference Update="coverlet.collector" Version="3.1.2" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+    <PackageReference Update="xunit" Version="2.4.1" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="2.4.3" />
     <PackageReference Update="Microsoft.ServiceFabric.Services.Remoting" Version="4.2.445" />
     <PackageReference Update="Sigil" Version="4.7.0" />
   </ItemGroup>

@@ -9,7 +9,7 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
     using Microsoft.ServiceFabric.Services.Remoting.V2;
     using System;
 
-    [Bond.Schema]
+    [global::Bond.Schema]
     internal class BondVoidResponseMessageBody : IServiceRemotingResponseMessageBody
     {
         public object Get(Type paramType) => null;

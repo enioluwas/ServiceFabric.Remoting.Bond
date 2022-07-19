@@ -7,6 +7,7 @@
 namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 {
     using System;
+    using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
@@ -16,7 +17,7 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 
     internal sealed class BondResponseMessageBodyTypeGenerator
     {
-        private static int TypeIdCounter = 0;
+        private static int TypeIdCounter;
         private const string GeneratedTypeSuffix = "_GeneratedResponse";
 
         public static BondResponseMessageBodyTypeGenerator Instance = new BondResponseMessageBodyTypeGenerator();
@@ -27,7 +28,7 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 
         private BondResponseMessageBodyTypeGenerator()
         {
-            this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, null);
+            this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, Array.Empty<object>());
             this.responseGetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Get));
             this.responseSetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Set));
         }
@@ -37,69 +38,54 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             var typeBuilder = Constants.GeneratedModuleBuilder.DefineType(this.GenerateTypeName(responseType));
             typeBuilder.SetCustomAttribute(this.bondSchemaCustomAttribute);
             var responseField = TypeGeneratorUtils.AddBondProperty(typeBuilder, "Response", responseType, 0);
-            var generatedConstructors = this.AddConstructors(typeBuilder, responseField);
+            this.AddConstructors(typeBuilder, responseField);
             this.AddResponseInterfaceDefinition(typeBuilder, responseField);
             var generatedType = typeBuilder.CreateType();
-            var typeInstanceFactory = this.BuildInstanceFactory(generatedConstructors);
+            var typeInstanceFactory = this.BuildInstanceFactory(generatedType);
             return new BondGeneratedResponseType { Type = generatedType, InstanceFactory = typeInstanceFactory };
         }
 
-        private GeneratedConstructors AddConstructors(TypeBuilder typeBuilder, FieldBuilder responseField)
+        private void AddConstructors(TypeBuilder typeBuilder, FieldBuilder responseField)
         {
             var responseType = responseField.FieldType;
 
             // Add typed parameter constructor: new Generated(ResponseType response)
             var typedConstructor = Emit.BuildConstructor(new[] { responseType }, typeBuilder, MethodAttributes.Public);
-            var typedConstructorBuilder = typeBuilder.DefineConstructor(
-                MethodAttributes.Public,
-                CallingConventions.Standard,
-                new[] { responseType });
-
-            var typedConstructorIL = typedConstructorBuilder.GetILGenerator();
-            typedConstructorIL.Emit(OpCodes.Ldarg_0);
-            typedConstructorIL.Emit(OpCodes.Ldarg_1);
-            typedConstructorIL.Emit(OpCodes.Stfld, responseField);
-            typedConstructorIL.Emit(OpCodes.Ret);
+            typedConstructor.LoadArgument(0);
+            typedConstructor.LoadArgument(1);
+            typedConstructor.StoreField(responseField);
+            typedConstructor.Return();
+            typedConstructor.CreateConstructor();
 
             // Add untyped parameter constructor: new Generated(object response)
-            var untypedConstructorBuilder = typeBuilder.DefineConstructor(
-                MethodAttributes.Public,
-                CallingConventions.Standard,
-                new[] { typeof(object) });
-
-            var untypedConstructorIL = typedConstructorBuilder.GetILGenerator();
-            untypedConstructorIL.Emit(OpCodes.Ldarg_0);
-            untypedConstructorIL.Emit(OpCodes.Ldarg_1);
+            var untypedConstructor = Emit.BuildConstructor(new[] { typeof(object) }, typeBuilder, MethodAttributes.Public);
+            untypedConstructor.LoadArgument(0);
+            untypedConstructor.LoadArgument(1);
             if (!responseType.IsClass)
             {
-                untypedConstructorIL.Emit(OpCodes.Unbox_Any, responseType);
+                untypedConstructor.UnboxAny(responseType);
             }
             else if (responseType != typeof(object))
             {
-                untypedConstructorIL.Emit(OpCodes.Castclass, responseType);
+                untypedConstructor.CastClass(responseType);
             }
-            untypedConstructorIL.Emit(OpCodes.Stfld, responseField);
-            untypedConstructorIL.Emit(OpCodes.Ret);
+            untypedConstructor.StoreField(responseField);
+            untypedConstructor.Return();
+            untypedConstructor.CreateConstructor();
 
             // Add parameterless constructor: new Generated()
-            var parameterlessConstructorBuilder = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
-
-            return new GeneratedConstructors
-            {
-                Parameterless = parameterlessConstructorBuilder,
-                Typed = typedConstructorBuilder,
-                Untyped = untypedConstructorBuilder,
-            };
+            typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
         }
 
-        private Func<IServiceRemotingResponseMessageBody, object> BuildInstanceFactory(GeneratedConstructors constructors)
+        private Func<IServiceRemotingResponseMessageBody, object> BuildInstanceFactory(Type generatedType)
         {
             var response = Expression.Parameter(typeof(IServiceRemotingResponseMessageBody), "response");
 
+            var generatedTypeConstructor = generatedType.GetConstructor(new[] { typeof(object) });
             // Generate a lambda equivalent to (response) => new Generated(response.Get(typeof(object)))
             var result = Expression.Lambda<Func<IServiceRemotingResponseMessageBody, object>>(
-                Expression.New(constructors.Untyped,
-                Expression.Call(response, this.responseGetMethod, Expression.Constant(typeof(object), typeof(Type)))),
+                Expression.New(generatedTypeConstructor,
+                    Expression.Call(response, this.responseGetMethod, Expression.Constant(typeof(object), typeof(Type)))),
                 response);
             return result.Compile();
         }
@@ -128,48 +114,51 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
 
         private void AddResponseSetMethod(TypeBuilder typeBuilder, FieldBuilder responseField)
         {
-            var setterMethodBuilder = typeBuilder.DefineMethod(
-                name: this.responseSetMethod.Name,
-                attributes: MethodAttributes.Public,
+            var setterMethod = Emit.BuildInstanceMethod(
                 returnType: typeof(void),
-                parameterTypes: new[] { typeof(object) });
+                parameterTypes: new[] { typeof(object) },
+                typeBuilder,
+                name: this.responseSetMethod.Name,
+                attributes: MethodAttributes.Public | MethodAttributes.Virtual);
 
-            var setterMethodIL = setterMethodBuilder.GetILGenerator();
-            setterMethodIL.Emit(OpCodes.Ldarg_0);
-            setterMethodIL.Emit(OpCodes.Ldarg_1);
+            setterMethod.LoadArgument(0);
+            setterMethod.LoadArgument(1);
+
             var responseType = responseField.FieldType;
             if (!responseType.IsClass)
             {
-                setterMethodIL.Emit(OpCodes.Unbox_Any, responseType);
+                setterMethod.UnboxAny(responseType);
             }
-            else if (responseField.FieldType != typeof(object))
+            else if (responseType != typeof(object))
             {
-                setterMethodIL.Emit(OpCodes.Castclass, responseType);
+                setterMethod.CastClass(responseType);
             }
 
-            setterMethodIL.Emit(OpCodes.Stfld, responseField);
-            setterMethodIL.Emit(OpCodes.Ret);
+            setterMethod.StoreField(responseField);
+            setterMethod.Return();
+            var setterMethodBuilder = setterMethod.CreateMethod();
             typeBuilder.DefineMethodOverride(setterMethodBuilder, this.responseSetMethod);
         }
 
         private void AddResponseGetMethod(TypeBuilder typeBuilder, FieldBuilder responseField)
         {
-            var getterMethodBuilder = typeBuilder.DefineMethod(
-                name: this.responseGetMethod.Name,
-                attributes: MethodAttributes.Public,
+            var getterMethod = Emit.BuildInstanceMethod(
                 returnType: typeof(object),
-                parameterTypes: new[] { typeof(Type) });
+                parameterTypes: new[] { typeof(Type) },
+                typeBuilder,
+                name: this.responseGetMethod.Name,
+                attributes: MethodAttributes.Public | MethodAttributes.Virtual);
 
-            var getterMethodIL = getterMethodBuilder.GetILGenerator();
-            getterMethodIL.Emit(OpCodes.Ldarg_0);
-            getterMethodIL.Emit(OpCodes.Ldfld, responseField);
+            getterMethod.LoadArgument(0);
+            getterMethod.LoadField(responseField);
             var responseType = responseField.FieldType;
             if (!responseType.IsClass)
             {
-                getterMethodIL.Emit(OpCodes.Box, responseType);
+                getterMethod.Box(responseType);
             }
 
-            getterMethodIL.Emit(OpCodes.Ret);
+            getterMethod.Return();
+            var getterMethodBuilder = getterMethod.CreateMethod();
             typeBuilder.DefineMethodOverride(getterMethodBuilder, this.responseGetMethod);
         }
     }
