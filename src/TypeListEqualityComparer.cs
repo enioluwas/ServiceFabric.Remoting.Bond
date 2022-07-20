@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ServiceFabric.Bond.Remoting
+namespace ServiceFabric.Remoting.Bond
 {
     internal class TypeListEqualityComparer : IEqualityComparer<List<Type>>
     {

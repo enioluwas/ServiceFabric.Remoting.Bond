@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <AssemblyName>ServiceFabric.Bond.Remoting</AssemblyName>
-    <RootNamespace>ServiceFabric.Bond.Remoting</RootNamespace>
+    <AssemblyName>ServiceFabric.Remoting.Bond</AssemblyName>
+    <RootNamespace>ServiceFabric.Remoting.Bond</RootNamespace>
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 

@@ -6,7 +6,7 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using Xunit;
 
-namespace ServiceFabric.Bond.Remoting.Test
+namespace ServiceFabric.Remoting.Bond.Test
 {
     public class BondRequestMessageSerializerTests
     {

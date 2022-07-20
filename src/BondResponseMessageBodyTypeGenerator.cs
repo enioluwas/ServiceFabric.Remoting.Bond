@@ -4,7 +4,7 @@
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace ServiceFabric.Bond.Remoting
+namespace ServiceFabric.Remoting.Bond
 {
     using System;
     using System.Linq.Expressions;

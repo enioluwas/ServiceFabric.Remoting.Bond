@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Microsoft.ServiceFabric.Services.Remoting.V2.Messaging;
 
-namespace ServiceFabric.Bond.Remoting.Test
+namespace ServiceFabric.Remoting.Bond.Test
 {
     internal class MockIncomingMessageBody : IIncomingMessageBody
     {

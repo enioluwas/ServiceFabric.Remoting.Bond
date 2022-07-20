@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Bond;
 
-namespace ServiceFabric.Bond.Remoting
+namespace ServiceFabric.Remoting.Bond
 {
     internal static class Constants
     {

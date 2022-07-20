@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Sigil.NonGeneric;
 
-namespace ServiceFabric.Bond.Remoting
+namespace ServiceFabric.Remoting.Bond
 {
     internal static class TypeGeneratorUtils
     {

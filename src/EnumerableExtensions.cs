@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace ServiceFabric.Bond.Remoting
+namespace ServiceFabric.Remoting.Bond
 {
     internal static class EnumerableExtensions
     {

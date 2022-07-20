@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ServiceFabric.Bond.Remoting.Test
+namespace ServiceFabric.Remoting.Bond.Test
 {
     [global::Bond.Schema]
     internal class BondGameInfo

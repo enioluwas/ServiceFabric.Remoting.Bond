@@ -8,7 +8,7 @@ using System.Threading;
 using Microsoft.ServiceFabric.Services.Remoting.V2;
 using Sigil.NonGeneric;
 
-namespace ServiceFabric.Bond.Remoting
+namespace ServiceFabric.Remoting.Bond
 {
     internal sealed class BondRequestMessageBodyTypeGenerator
     {

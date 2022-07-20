@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ServiceFabric.Bond.Remoting.Test
+namespace ServiceFabric.Remoting.Bond.Test
 {
     internal static class BondTypeAliasConverter
     {

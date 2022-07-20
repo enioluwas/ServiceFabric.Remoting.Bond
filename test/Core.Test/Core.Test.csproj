@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>ServiceFabric.Bond.Remoting.Test</AssemblyName>
-    <RootNamespace>ServiceFabric.Bond.Remoting.Test</RootNamespace>
+    <AssemblyName>ServiceFabric.Remoting.Bond.Test</AssemblyName>
+    <RootNamespace>ServiceFabric.Remoting.Bond.Test</RootNamespace>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
