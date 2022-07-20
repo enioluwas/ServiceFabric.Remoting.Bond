@@ -1,8 +1,7 @@
 ﻿using Microsoft.ServiceFabric.Services.Remoting.V2;
-using Microsoft.ServiceFabric.Services.Remoting.V2.Bond;
 using Xunit;
 
-namespace Core.Test
+namespace ServiceFabric.Bond.Remoting.Test
 {
     public class BondResponseMessageBodyTypeGeneratorTests
     {

@@ -4,10 +4,9 @@
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
     using System;
-    using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
@@ -41,7 +40,7 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             this.AddConstructors(typeBuilder, responseField);
             this.AddResponseInterfaceDefinition(typeBuilder, responseField);
             var generatedType = typeBuilder.CreateType();
-            var typeInstanceFactory = this.BuildInstanceFactory(generatedType);
+            var typeInstanceFactory = this.BuildInstanceFactory(generatedType, responseType);
             return new BondGeneratedResponseType { Type = generatedType, InstanceFactory = typeInstanceFactory };
         }
 
@@ -77,16 +76,17 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
         }
 
-        private Func<IServiceRemotingResponseMessageBody, object> BuildInstanceFactory(Type generatedType)
+        private Func<IServiceRemotingResponseMessageBody, object> BuildInstanceFactory(Type generatedType, Type responseType)
         {
-            var response = Expression.Parameter(typeof(IServiceRemotingResponseMessageBody), "response");
+            var generatedTypeConstructor = generatedType.GetConstructor(new[] { responseType });
 
-            var generatedTypeConstructor = generatedType.GetConstructor(new[] { typeof(object) });
+            var response = Expression.Parameter(typeof(IServiceRemotingResponseMessageBody), "response");
+            var getInnerResponse = Expression.Call(response, this.responseGetMethod, Expression.Constant(typeof(object), typeof(Type)));
+            var convertedInnerResponse = Expression.Convert(getInnerResponse, responseType);
+            var generatedResponse = Expression.New(generatedTypeConstructor, convertedInnerResponse);
+
             // Generate a lambda equivalent to (response) => new Generated(response.Get(typeof(object)))
-            var result = Expression.Lambda<Func<IServiceRemotingResponseMessageBody, object>>(
-                Expression.New(generatedTypeConstructor,
-                    Expression.Call(response, this.responseGetMethod, Expression.Constant(typeof(object), typeof(Type)))),
-                response);
+            var result = Expression.Lambda<Func<IServiceRemotingResponseMessageBody, object>>(generatedResponse, response);
             return result.Compile();
         }
 

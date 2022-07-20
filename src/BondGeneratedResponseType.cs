@@ -4,7 +4,7 @@
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
     using Microsoft.ServiceFabric.Services.Remoting.V2;
     using System;

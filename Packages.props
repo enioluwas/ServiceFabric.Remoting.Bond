@@ -4,6 +4,7 @@
 -->
 <Project>
   <ItemGroup Label="Package Versions used by this repository">
+    <PackageReference Update="AutoFixture" Version="4.17.0" />
     <PackageReference Update="Bond.Core.CSharp" Version="9.0.5" />
     <PackageReference Update="coverlet.collector" Version="3.1.2" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.1.0" />

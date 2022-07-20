@@ -4,20 +4,17 @@
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
+    using System;
     using global::Bond;
     using global::Bond.IO.Unsafe;
     using global::Bond.Protocols;
     using Microsoft.ServiceFabric.Services.Remoting.V2;
     using Microsoft.ServiceFabric.Services.Remoting.V2.Messaging;
-    using System;
-    using System.Collections.Concurrent;
 
     internal class BondResponseMessageBodySerializer : IServiceRemotingResponseMessageBodySerializer
     {
-        private static readonly ConcurrentDictionary<Type, BondGeneratedResponseType> GeneratedResponseTypeCache = new ConcurrentDictionary<Type, BondGeneratedResponseType>();
-
         private readonly BondGeneratedResponseType generatedResponseType;
         private readonly Serializer<CompactBinaryWriter<OutputBuffer>> serializer;
         private readonly Deserializer<CompactBinaryReader<InputStream>> deserializer;
@@ -28,16 +25,13 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             {
                 this.generatedResponseType = new BondGeneratedResponseType
                 {
-                    Type = typeof(BondVoidResponseMessageBody),
-                    InstanceFactory = (_) => new BondVoidResponseMessageBody(),
+                    Type = typeof(BondEmptyResponseMessageBody),
+                    InstanceFactory = (_) => new BondEmptyResponseMessageBody(),
                 };
             }
             else
             {
-                this.generatedResponseType = GeneratedResponseTypeCache
-                    .GetOrAdd(
-                        responseType,
-                        (type) => BondResponseMessageBodyTypeGenerator.Instance.Generate(type));
+                this.generatedResponseType = BondResponseMessageBodyTypeGenerator.Instance.Generate(responseType);
             }
 
             this.serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(this.generatedResponseType.Type);

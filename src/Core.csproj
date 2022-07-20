@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <AssemblyName>ServiceFabric.Bond.Remoting</AssemblyName>
-    <RootNamespace>Microsoft.ServiceFabric.Services.Remoting.V2.Bond</RootNamespace>
+    <RootNamespace>ServiceFabric.Bond.Remoting</RootNamespace>
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 

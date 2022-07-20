@@ -5,9 +5,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading;
+using Microsoft.ServiceFabric.Services.Remoting.V2;
 using Sigil.NonGeneric;
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
     internal sealed class BondRequestMessageBodyTypeGenerator
     {
@@ -36,31 +37,32 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             this.AddConstructors(typeBuilder, requestTypes, generatedFields);
             this.AddRequestInterfaceDefinition(typeBuilder, generatedFields);
             var generatedType = typeBuilder.CreateType();
-            var typeInstanceFactory = this.BuildInstanceFactory(generatedType, generatedFields);
+            var typeInstanceFactory = this.BuildInstanceFactory(generatedType, requestTypes);
             return new BondGeneratedRequestType { Type = generatedType, InstanceFactory = typeInstanceFactory };
         }
 
-        private Func<IServiceRemotingRequestMessageBody, object> BuildInstanceFactory(Type generatedType, FieldBuilder[] generatedFields)
+        private Func<IServiceRemotingRequestMessageBody, object> BuildInstanceFactory(Type generatedType, Type[] requestTypes)
         {
             var request = Expression.Parameter(typeof(IServiceRemotingRequestMessageBody), "request");
-            var generatedTypeConstructor = generatedType.GetConstructor(Enumerable.Repeat(typeof(object), generatedFields.Length).ToArray());
+            var generatedTypeConstructor = generatedType.GetConstructor(requestTypes);
 
-            var fieldGetters = new MethodCallExpression[generatedFields.Length];
-            for (int i = 0; i < generatedFields.Length; i++)
+            var fieldGetters = new Expression[requestTypes.Length];
+            for (int i = 0; i < requestTypes.Length; i++)
             {
-                // request.GetParameter(i, null, typeof(void));
-                fieldGetters[i] = Expression.Call(
+                // (Type)request.GetParameter(i, null, typeof(void));
+                var getParameter = Expression.Call(
                     request,
                     this.requestGetParameterMethod,
                     Expression.Constant(i),
                     Expression.Constant(string.Empty, typeof(string)),
                     Expression.Constant(typeof(void), typeof(Type)));
+                fieldGetters[i] = Expression.Convert(getParameter, requestTypes[i]);
             }
 
+            var generatedRequest = Expression.New(generatedTypeConstructor, fieldGetters);
+
             // Generate a lambda like (request) => new Generated(request.GetParameter(1, null, typeof(void)), ... request.GetParameter(n, null, typeof(void)))
-            var result = Expression.Lambda<Func<IServiceRemotingRequestMessageBody, object>>(
-                Expression.New(generatedTypeConstructor, fieldGetters),
-                request);
+            var result = Expression.Lambda<Func<IServiceRemotingRequestMessageBody, object>>(generatedRequest, request);
             return result.Compile();
         }
 

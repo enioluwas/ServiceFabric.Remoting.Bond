@@ -4,22 +4,19 @@
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
-    using Bond;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using global::Bond;
     using global::Bond.IO.Unsafe;
     using global::Bond.Protocols;
     using Microsoft.ServiceFabric.Services.Remoting.V2;
     using Microsoft.ServiceFabric.Services.Remoting.V2.Messaging;
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
 
     internal class BondRequestMessageBodySerializer : IServiceRemotingRequestMessageBodySerializer
     {
-        private static readonly ConcurrentDictionary<Type[], BondGeneratedRequestType> GeneratedRequestTypeCache = new ConcurrentDictionary<Type[], BondGeneratedRequestType>();
         private readonly BondGeneratedRequestType generatedRequestType;
         private readonly Serializer<CompactBinaryWriter<OutputBuffer>> serializer;
         private readonly Deserializer<CompactBinaryReader<InputStream>> deserializer;
@@ -30,16 +27,13 @@ namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
             {
                 this.generatedRequestType = new BondGeneratedRequestType
                 {
-                    Type = typeof(BondVoidRequestMessageBody),
-                    InstanceFactory = (_) => new BondVoidRequestMessageBody(),
+                    Type = typeof(BondEmptyRequestMessageBody),
+                    InstanceFactory = (_) => new BondEmptyRequestMessageBody(),
                 };
             }
             else
             {
-                this.generatedRequestType = GeneratedRequestTypeCache
-                    .GetOrAdd(
-                    requestBodyTypes.ToArray(),
-                    (types) => BondRequestMessageBodyTypeGenerator.Instance.Generate(types));
+                this.generatedRequestType = BondRequestMessageBodyTypeGenerator.Instance.Generate(requestBodyTypes.ToArray());
             }
 
             this.serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(this.generatedRequestType.Type);

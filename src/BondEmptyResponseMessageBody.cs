@@ -1,20 +1,20 @@
 ﻿// --------------------------------------------------------------------------------
-// <copyright file="BondVoidRequestMessageBody.cs" company="Microsoft Corporation">
+// <copyright file="BondEmptyResponseMessageBody.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
     using Microsoft.ServiceFabric.Services.Remoting.V2;
     using System;
 
     [global::Bond.Schema]
-    internal class BondVoidRequestMessageBody : IServiceRemotingRequestMessageBody
+    internal class BondEmptyResponseMessageBody : IServiceRemotingResponseMessageBody
     {
-        public object GetParameter(int position, string parameName, Type paramType) => null;
+        public object Get(Type paramType) => null;
 
-        public void SetParameter(int position, string parameName, object parameter)
+        public void Set(object response)
         {
             // No-op.
         }

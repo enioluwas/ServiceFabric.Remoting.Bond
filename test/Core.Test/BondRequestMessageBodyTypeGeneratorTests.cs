@@ -1,22 +1,29 @@
 ﻿using Microsoft.ServiceFabric.Services.Remoting.V2;
-using Microsoft.ServiceFabric.Services.Remoting.V2.Bond;
+using ServiceFabric.Bond.Remoting;
 using Xunit;
 
-namespace Core.Test
+namespace ServiceFabric.Bond.Remoting.Test
 {
     public class BondRequestMessageBodyTypeGeneratorTests
     {
         [Fact]
         public void Generate_Type_GeneratesType()
         {
-            var type = typeof(string);
-            var generatedType = BondRequestMessageBodyTypeGenerator.Instance.Generate(type);
-            var innerResponse = "Test";
-            var response = new BondResponseMessageBody();
-            response.Set(innerResponse);
-            var generatedTypeInstance = generatedType.InstanceFactory(response) as IServiceRemotingResponseMessageBody;
+            var types = new[] { typeof(string), typeof(int), typeof(CollectionBehavior) };
+            var generatedType = BondRequestMessageBodyTypeGenerator.Instance.Generate(types);
+            var innerResponse = new object[] { "Test", 125, CollectionBehavior.CollectionPerClass };
+            var response = new BondRequestMessageBody(innerResponse.Length);
+            for (int i = 0; i < innerResponse.Length; i++)
+            {
+                response.SetParameter(i, "", innerResponse[i]);
+            }
+
+            var generatedTypeInstance = generatedType.InstanceFactory(response) as IServiceRemotingRequestMessageBody;
             Assert.NotNull(generatedTypeInstance);
-            Assert.Equal(innerResponse, generatedTypeInstance.Get(typeof(void)));
+            for (int i = 0; i < innerResponse.Length; i++)
+            {
+                Assert.Equal(innerResponse[i], generatedTypeInstance.GetParameter(i, "", typeof(void)));
+            }
         }
     }
 }

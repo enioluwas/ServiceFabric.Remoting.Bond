@@ -1,3 +1,3 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Core.Test")]
+[assembly: InternalsVisibleTo("ServiceFabric.Bond.Remoting.Test")]

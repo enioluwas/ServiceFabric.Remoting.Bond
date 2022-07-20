@@ -4,28 +4,45 @@
 // </copyright>
 // --------------------------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.Services.Remoting.V2.Bond
+namespace ServiceFabric.Bond.Remoting
 {
-    using Microsoft.ServiceFabric.Services.Remoting.V2;
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
+    using Microsoft.ServiceFabric.Services.Remoting.V2;
 
-    internal class BondRemotingSerializationProvider : IServiceRemotingMessageSerializationProvider
+    public class BondRemotingSerializationProvider : IServiceRemotingMessageSerializationProvider
     {
+        private static readonly ConcurrentDictionary<List<Type>, BondRequestMessageBodySerializer> RequestSerializerCache = new ConcurrentDictionary<List<Type>, BondRequestMessageBodySerializer>(new TypeListEqualityComparer());
+        private static readonly ConcurrentDictionary<Type, BondResponseMessageBodySerializer> ResponseSerializerCache = new ConcurrentDictionary<Type, BondResponseMessageBodySerializer>();
+        private static BondRequestMessageBodySerializer EmptyRequestSerializer;
+        private static BondResponseMessageBodySerializer EmptyResponseSerializer;
+
         public IServiceRemotingMessageBodyFactory CreateMessageBodyFactory()
         {
             return new BondMessageFactory();
         }
 
-        public IServiceRemotingRequestMessageBodySerializer CreateRequestMessageSerializer(Type serviceInterfaceType, IEnumerable<Type> requestWrappedTypes, IEnumerable<Type> requestBodyTypes = null)
+        public IServiceRemotingRequestMessageBodySerializer CreateRequestMessageSerializer(Type serviceInterfaceType, IEnumerable<Type> methodParameterTypes, IEnumerable<Type> wrappedMessageTypes = null)
         {
-            return new RemotingRequestBondMessageBodySerializer(requestBodyTypes);
+            if (!methodParameterTypes.Any())
+            {
+                return EmptyRequestSerializer ??= new BondRequestMessageBodySerializer(Enumerable.Empty<Type>());
+            }
+
+            return RequestSerializerCache.GetOrAdd(methodParameterTypes.ToOrAsList(), (types) => new BondRequestMessageBodySerializer(types));
         }
 
-        public IServiceRemotingResponseMessageBodySerializer CreateResponseMessageSerializer(Type serviceInterfaceType, IEnumerable<Type> responseWrappedTypes, IEnumerable<Type> responseBodyTypes = null)
+        public IServiceRemotingResponseMessageBodySerializer CreateResponseMessageSerializer(Type serviceInterfaceType, IEnumerable<Type> methodParameterTypes, IEnumerable<Type> wrappedMessageTypes = null)
         {
-            return new RemotingResponseBondMessageBodySerializer(responseBodyTypes.FirstOrDefault());
+            var responseType = methodParameterTypes.FirstOrDefault();
+            if (responseType == null)
+            {
+                return EmptyResponseSerializer ??= new BondResponseMessageBodySerializer(null);
+            }
+
+            return ResponseSerializerCache.GetOrAdd(methodParameterTypes.First(), (type) => new BondResponseMessageBodySerializer(type));
         }
     }
 }
