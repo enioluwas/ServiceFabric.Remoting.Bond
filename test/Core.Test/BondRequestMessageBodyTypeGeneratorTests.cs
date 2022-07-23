@@ -1,5 +1,4 @@
 ﻿using Microsoft.ServiceFabric.Services.Remoting.V2;
-using ServiceFabric.Remoting.Bond;
 using Xunit;
 
 namespace ServiceFabric.Remoting.Bond.Test
@@ -12,7 +11,7 @@ namespace ServiceFabric.Remoting.Bond.Test
             var types = new[] { typeof(string), typeof(int), typeof(CollectionBehavior) };
             var generatedType = BondRequestMessageBodyTypeGenerator.Instance.Generate(types);
             var innerResponse = new object[] { "Test", 125, CollectionBehavior.CollectionPerClass };
-            var response = new BondRequestMessageBody(innerResponse.Length);
+            var response = new BondRequestMessageBody("TestInterface", "TestMethod", innerResponse.Length);
             for (int i = 0; i < innerResponse.Length; i++)
             {
                 response.SetParameter(i, "", innerResponse[i]);

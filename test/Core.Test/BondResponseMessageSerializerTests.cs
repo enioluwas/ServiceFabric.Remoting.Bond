@@ -11,9 +11,9 @@ namespace ServiceFabric.Remoting.Bond.Test
         [Fact]
         public void RoundTrip()
         {
-            var serializer = new BondResponseMessageBodySerializer(typeof(BondGameInfo));
+            var serializer = new BondResponseMessageBodySerializer();
             var response = new Fixture().Create<BondGameInfo>();
-            var responseMessage = new BondResponseMessageBody();
+            var responseMessage = new BondResponseMessageBody("TestInterface", "TestMethod");
             responseMessage.Set(response);
             var serializedMessage = serializer.Serialize(responseMessage);
 

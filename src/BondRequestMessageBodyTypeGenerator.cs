@@ -5,6 +5,9 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading;
+using Bond;
+using Bond.IO.Unsafe;
+using Bond.Protocols;
 using Microsoft.ServiceFabric.Services.Remoting.V2;
 using Sigil.NonGeneric;
 
@@ -38,7 +41,14 @@ namespace ServiceFabric.Remoting.Bond
             this.AddRequestInterfaceDefinition(typeBuilder, generatedFields);
             var generatedType = typeBuilder.CreateType();
             var typeInstanceFactory = this.BuildInstanceFactory(generatedType, requestTypes);
-            return new BondGeneratedRequestType { Type = generatedType, InstanceFactory = typeInstanceFactory };
+
+            return new BondGeneratedRequestType
+            {
+                Type = generatedType,
+                InstanceFactory = typeInstanceFactory,
+                Serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(generatedType),
+                Deserializer = new Deserializer<CompactBinaryReader<InputBuffer>>(generatedType),
+            };
         }
 
         private Func<IServiceRemotingRequestMessageBody, object> BuildInstanceFactory(Type generatedType, Type[] requestTypes)

@@ -11,6 +11,9 @@ namespace ServiceFabric.Remoting.Bond
     using System.Reflection;
     using System.Reflection.Emit;
     using System.Threading;
+    using global::Bond;
+    using global::Bond.IO.Unsafe;
+    using global::Bond.Protocols;
     using Microsoft.ServiceFabric.Services.Remoting.V2;
     using Sigil.NonGeneric;
 
@@ -41,7 +44,14 @@ namespace ServiceFabric.Remoting.Bond
             this.AddResponseInterfaceDefinition(typeBuilder, responseField);
             var generatedType = typeBuilder.CreateType();
             var typeInstanceFactory = this.BuildInstanceFactory(generatedType, responseType);
-            return new BondGeneratedResponseType { Type = generatedType, InstanceFactory = typeInstanceFactory };
+
+            return new BondGeneratedResponseType
+            {
+                Type = generatedType,
+                InstanceFactory = typeInstanceFactory,
+                Serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(generatedType),
+                Deserializer = new Deserializer<CompactBinaryReader<InputBuffer>>(generatedType),
+            };
         }
 
         private void AddConstructors(TypeBuilder typeBuilder, FieldBuilder responseField)

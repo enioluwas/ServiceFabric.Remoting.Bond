@@ -31,8 +31,8 @@ namespace ServiceFabric.Remoting.Bond.Test
 
             object[] parameters = types.Select((type) => fixture.Create(type, context)).ToArray();
 
-            var serializer = new BondRequestMessageBodySerializer(types);
-            var requestMessage = new BondRequestMessageBody(types.Length);
+            var serializer = new BondRequestMessageBodySerializer();
+            var requestMessage = new BondRequestMessageBody("TestInterface", "TestMethod", types.Length);
             for (int i = 0; i < parameters.Length; i++)
             {
                 requestMessage.SetParameter(i, "", parameters[i]);

@@ -12,12 +12,12 @@ namespace ServiceFabric.Remoting.Bond
     {
         public IServiceRemotingRequestMessageBody CreateRequest(string interfaceName, string methodName, int numberOfParameters, object wrappedRequestObject)
         {
-            return new BondRequestMessageBody(numberOfParameters);
+            return new BondRequestMessageBody(interfaceName, methodName, numberOfParameters);
         }
 
         public IServiceRemotingResponseMessageBody CreateResponse(string interfaceName, string methodName, object wrappedResponseObject)
         {
-            return new BondResponseMessageBody();
+            return new BondResponseMessageBody(interfaceName, methodName);
         }
     }
 }
