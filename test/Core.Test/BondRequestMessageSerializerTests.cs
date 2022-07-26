@@ -27,11 +27,12 @@ namespace ServiceFabric.Remoting.Bond.Test
                 typeof(double),
                 typeof(float),
                 typeof(BondGameInfo[]),
+                typeof(TimeSpan),
             };
 
             object[] parameters = types.Select((type) => fixture.Create(type, context)).ToArray();
 
-            var serializer = new BondRequestMessageBodySerializer();
+            var serializer = new BondRequestMessageBodySerializer(typeof(BondTypeAliasConverter));
             var requestMessage = new BondRequestMessageBody("TestInterface", "TestMethod", types.Length);
             for (int i = 0; i < parameters.Length; i++)
             {

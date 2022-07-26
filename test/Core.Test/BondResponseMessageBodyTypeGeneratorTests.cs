@@ -9,7 +9,8 @@ namespace ServiceFabric.Remoting.Bond.Test
         public void Generate_Type_GeneratesType()
         {
             var type = typeof(string);
-            var generatedType = BondResponseMessageBodyTypeGenerator.Instance.Generate(type);
+            var generator = new BondResponseMessageBodyTypeGenerator(null);
+            var generatedType = generator.Generate(type);
             var innerResponse = "Test";
             var response = new BondResponseMessageBody("TestInterface", "TestMethod");
             response.Set(innerResponse);

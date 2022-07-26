@@ -7,6 +7,7 @@
 namespace ServiceFabric.Remoting.Bond
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
@@ -24,11 +25,21 @@ namespace ServiceFabric.Remoting.Bond
         private const string GeneratedTypeSuffix = "_GeneratedResponse";
 
         private readonly CustomAttributeBuilder bondSchemaCustomAttribute;
+        private readonly Dictionary<Type, BondTypeConverter> bondTypeConverterMap;
         private readonly MethodInfo responseGetMethod;
         private readonly MethodInfo responseSetMethod;
 
         public BondResponseMessageBodyTypeGenerator(Type converterType)
         {
+            if (converterType != null)
+            {
+                this.bondTypeConverterMap = new Dictionary<Type, BondTypeConverter>();
+            }
+            else
+            {
+                this.bondTypeConverterMap = new Dictionary<Type, BondTypeConverter>(0);
+            }
+
             this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, Array.Empty<object>());
             this.responseGetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Get))!;
             this.responseSetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Set))!;
@@ -38,7 +49,7 @@ namespace ServiceFabric.Remoting.Bond
         {
             var typeBuilder = Constants.GeneratedModuleBuilder.DefineType(this.GenerateTypeName(responseType));
             typeBuilder.SetCustomAttribute(this.bondSchemaCustomAttribute);
-            var responseField = TypeGeneratorUtils.AddBondProperty(typeBuilder, "Response", responseType, 0);
+            var responseField = TypeGeneratorUtils.AddBondProperty(typeBuilder, "Response", responseType, 0, this.bondTypeConverterMap);
             this.AddConstructors(typeBuilder, responseField);
             this.AddResponseInterfaceDefinition(typeBuilder, responseField);
             var generatedType = typeBuilder.CreateType()!;

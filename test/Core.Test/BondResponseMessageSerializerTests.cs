@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
 using AutoFixture;
-using ServiceFabric.Remoting.Bond;
 using Xunit;
 
 namespace ServiceFabric.Remoting.Bond.Test
@@ -11,7 +10,7 @@ namespace ServiceFabric.Remoting.Bond.Test
         [Fact]
         public void RoundTrip()
         {
-            var serializer = new BondResponseMessageBodySerializer();
+            var serializer = new BondResponseMessageBodySerializer(typeof(BondTypeAliasConverter));
             var response = new Fixture().Create<BondGameInfo>();
             var responseMessage = new BondResponseMessageBody("TestInterface", "TestMethod");
             responseMessage.Set(response);

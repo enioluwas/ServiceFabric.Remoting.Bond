@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -20,12 +21,21 @@ namespace ServiceFabric.Remoting.Bond
         private const string GeneratedTypeSuffix = "_GeneratedRequest";
 
         private readonly CustomAttributeBuilder bondSchemaCustomAttribute;
-
+        private readonly Dictionary<Type, BondTypeConverter> bondTypeConverterMap;
         private readonly MethodInfo requestGetParameterMethod;
         private readonly MethodInfo requestSetParameterMethod;
 
         public BondRequestMessageBodyTypeGenerator(Type converterType)
         {
+            if (converterType != null)
+            {
+                this.bondTypeConverterMap = new Dictionary<Type, BondTypeConverter>();
+            }
+            else
+            {
+                this.bondTypeConverterMap = new Dictionary<Type, BondTypeConverter>(0);
+            }
+
             this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, Array.Empty<object>());
             this.requestGetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.GetParameter))!;
             this.requestSetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.SetParameter))!;
@@ -199,7 +209,7 @@ namespace ServiceFabric.Remoting.Bond
 
             for (int i = 0; i < requestTypes.Length; i++)
             {
-                backingFields[i] = TypeGeneratorUtils.AddBondProperty(typeBuilder, $"{GeneratedFieldPrefix}{i}", requestTypes[i], i);
+                backingFields[i] = TypeGeneratorUtils.AddBondProperty(typeBuilder, $"{GeneratedFieldPrefix}{i}", requestTypes[i], i, this.bondTypeConverterMap);
             }
 
             return backingFields;
