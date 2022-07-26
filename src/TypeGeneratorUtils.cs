@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Bond;
 using Sigil.NonGeneric;
 
 namespace ServiceFabric.Remoting.Bond
@@ -44,6 +47,19 @@ namespace ServiceFabric.Remoting.Bond
             propBuilder.SetCustomAttribute(new CustomAttributeBuilder(Constants.BondRequiredAttributeConstructor, Array.Empty<object>()));
             propBuilder.SetCustomAttribute(new CustomAttributeBuilder(Constants.BondIdAttributeConstructor, new object[] { (ushort)propBondId }));
             return backingFieldBuilder;
+        }
+
+        public static Dictionary<Type, BondTypeConverter> LoadConverters(Type converterType)
+        {
+            var converterMethods = converterType
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Where((method) => method.Name == "Convert" && method.GetParameters().Length == 2 && method.ReturnType != typeof(void))
+
+            var typesToConvert = converterMethods
+                .Select((method) => method.GetParameters()[0].ParameterType)
+                .Where((type) => type.GetBondDataType() == BondDataType.BT_UNAVAILABLE);
+
+            var converters = new Dictionary<Type, BondTypeConverter>
         }
     }
 }

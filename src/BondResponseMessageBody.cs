@@ -20,6 +20,7 @@ namespace ServiceFabric.Remoting.Bond
         {
             this.InterfaceName = interfaceName;
             this.MethodName = methodName;
+            this.ReturnTypeName = Constants.VoidTypeName;
         }
 
         public object Get(Type paramType) => this.response;

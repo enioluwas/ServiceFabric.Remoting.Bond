@@ -16,14 +16,14 @@ namespace ServiceFabric.Remoting.Bond
 
     internal class BondResponseMessageBodySerializer : IServiceRemotingResponseMessageBodySerializer
     {
-        private static readonly string VoidTypeName = typeof(void).AssemblyQualifiedName;
-
+        private readonly BondResponseMessageBodyTypeGenerator typeGenerator;
         private readonly Serializer<CompactBinaryWriter<OutputBuffer>> serializer;
         private readonly Deserializer<CompactBinaryReader<InputStream>> deserializer;
         private readonly ConcurrentDictionary<ResponseCacheKey, BondGeneratedResponseType> generatedTypeCache;
 
-        public BondResponseMessageBodySerializer()
+        public BondResponseMessageBodySerializer(Type converterType)
         {
+            this.typeGenerator = new BondResponseMessageBodyTypeGenerator(converterType);
             this.serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(typeof(BondResponseMessageMetadata));
             this.deserializer = new Deserializer<CompactBinaryReader<InputStream>>(typeof(BondResponseMessageMetadata));
             this.generatedTypeCache = new ConcurrentDictionary<ResponseCacheKey, BondGeneratedResponseType>();
@@ -34,7 +34,7 @@ namespace ServiceFabric.Remoting.Bond
             var wrappedReader = new CompactBinaryReader<InputStream>(new InputStream(messageBody.GetReceivedBuffer(), 1024));
             var wrappedMessage = this.deserializer.Deserialize<BondResponseMessageMetadata>(wrappedReader);
 
-            if (wrappedMessage.ReturnTypeName == VoidTypeName)
+            if (wrappedMessage.ReturnTypeName == Constants.VoidTypeName)
             {
                 return new BondEmptyResponseMessageBody();
             }
@@ -52,9 +52,9 @@ namespace ServiceFabric.Remoting.Bond
 
         public IOutgoingMessageBody Serialize(IServiceRemotingResponseMessageBody serviceRemotingResponseMessageBody)
         {
-            var bondMessageBody = serviceRemotingResponseMessageBody as BondResponseMessageBody;
+            var bondMessageBody = (BondResponseMessageBody)serviceRemotingResponseMessageBody;
 
-            if (bondMessageBody.ReturnTypeName == VoidTypeName)
+            if (bondMessageBody.ReturnTypeName == Constants.VoidTypeName)
             {
                 var message = new BondResponseMessageMetadata
                 {
@@ -97,7 +97,7 @@ namespace ServiceFabric.Remoting.Bond
         {
             return this.generatedTypeCache.GetOrAdd(
                 cacheKey,
-                (key) => BondResponseMessageBodyTypeGenerator.Instance.Generate(Type.GetType(key.ReturnTypeName)));
+                (key) => this.typeGenerator.Generate(Type.GetType(key.ReturnTypeName)));
         }
 
         private readonly struct ResponseCacheKey

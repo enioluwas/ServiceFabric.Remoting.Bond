@@ -18,12 +18,14 @@ namespace ServiceFabric.Remoting.Bond
 
     internal class BondRequestMessageBodySerializer : IServiceRemotingRequestMessageBodySerializer
     {
+        private readonly BondRequestMessageBodyTypeGenerator typeGenerator;
         private readonly Serializer<CompactBinaryWriter<OutputBuffer>> serializer;
         private readonly Deserializer<CompactBinaryReader<InputStream>> deserializer;
         private readonly ConcurrentDictionary<RequestCacheKey, BondGeneratedRequestType> generatedTypeCache;
 
-        public BondRequestMessageBodySerializer()
+        public BondRequestMessageBodySerializer(Type converterType)
         {
+            this.typeGenerator = new BondRequestMessageBodyTypeGenerator(converterType);
             this.serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(typeof(BondRequestMessageMetadata));
             this.deserializer = new Deserializer<CompactBinaryReader<InputStream>>(typeof(BondRequestMessageMetadata));
             this.generatedTypeCache = new ConcurrentDictionary<RequestCacheKey, BondGeneratedRequestType>();
@@ -52,7 +54,7 @@ namespace ServiceFabric.Remoting.Bond
 
         public IOutgoingMessageBody Serialize(IServiceRemotingRequestMessageBody serviceRemotingRequestMessageBody)
         {
-            var bondMessageBody = serviceRemotingRequestMessageBody as BondRequestMessageBody;
+            var bondMessageBody = (BondRequestMessageBody)serviceRemotingRequestMessageBody;
 
             if (bondMessageBody.ParameterTypeNames.Count == 0)
             {
@@ -97,8 +99,8 @@ namespace ServiceFabric.Remoting.Bond
         {
             return this.generatedTypeCache.GetOrAdd(
                 cacheKey,
-                (key) => BondRequestMessageBodyTypeGenerator.Instance.Generate(
-                    key.ParameterTypeNames.Select((typeName) => Type.GetType(typeName)).ToArray()));
+                (key) => this.typeGenerator.Generate(
+                    key.ParameterTypeNames.Select((typeName) => Type.GetType(typeName)!).ToArray()));
         }
 
         private readonly struct RequestCacheKey

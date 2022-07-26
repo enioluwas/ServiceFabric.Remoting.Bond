@@ -19,17 +19,16 @@ namespace ServiceFabric.Remoting.Bond
         private const string GeneratedFieldPrefix = "Parameter_";
         private const string GeneratedTypeSuffix = "_GeneratedRequest";
 
-        public static BondRequestMessageBodyTypeGenerator Instance = new BondRequestMessageBodyTypeGenerator();
-
         private readonly CustomAttributeBuilder bondSchemaCustomAttribute;
+
         private readonly MethodInfo requestGetParameterMethod;
         private readonly MethodInfo requestSetParameterMethod;
 
-        private BondRequestMessageBodyTypeGenerator()
+        public BondRequestMessageBodyTypeGenerator(Type converterType)
         {
             this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, Array.Empty<object>());
-            this.requestGetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.GetParameter));
-            this.requestSetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.SetParameter));
+            this.requestGetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.GetParameter))!;
+            this.requestSetParameterMethod = typeof(IServiceRemotingRequestMessageBody).GetMethod(nameof(IServiceRemotingRequestMessageBody.SetParameter))!;
         }
 
         public BondGeneratedRequestType Generate(Type[] requestTypes)
@@ -39,7 +38,7 @@ namespace ServiceFabric.Remoting.Bond
             var generatedFields = this.AddBondProperties(typeBuilder, requestTypes);
             this.AddConstructors(typeBuilder, requestTypes, generatedFields);
             this.AddRequestInterfaceDefinition(typeBuilder, generatedFields);
-            var generatedType = typeBuilder.CreateType();
+            var generatedType = typeBuilder.CreateType()!;
             var typeInstanceFactory = this.BuildInstanceFactory(generatedType, requestTypes);
 
             return new BondGeneratedRequestType
@@ -54,7 +53,7 @@ namespace ServiceFabric.Remoting.Bond
         private Func<IServiceRemotingRequestMessageBody, object> BuildInstanceFactory(Type generatedType, Type[] requestTypes)
         {
             var request = Expression.Parameter(typeof(IServiceRemotingRequestMessageBody), "request");
-            var generatedTypeConstructor = generatedType.GetConstructor(requestTypes);
+            var generatedTypeConstructor = generatedType.GetConstructor(requestTypes)!;
 
             var fieldGetters = new Expression[requestTypes.Length];
             for (int i = 0; i < requestTypes.Length; i++)

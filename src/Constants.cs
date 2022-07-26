@@ -15,6 +15,7 @@ namespace ServiceFabric.Remoting.Bond
 
         public const string GeneratedAssemblyName = "Kronox.WebClients.Remoting.BondGenerated";
         public static readonly MethodAttributes PropertyMethodAttributes = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+        public const string VoidTypeName = "";
 
         static Constants()
         {

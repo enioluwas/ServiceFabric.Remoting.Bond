@@ -12,6 +12,17 @@ namespace ServiceFabric.Remoting.Bond
 
     public class BondRemotingSerializationProvider : IServiceRemotingMessageSerializationProvider
     {
+        private readonly Type converterType;
+
+        public BondRemotingSerializationProvider(Type converterType)
+        {
+            this.converterType = converterType;
+        }
+
+        public BondRemotingSerializationProvider()
+        {
+        }
+
         public IServiceRemotingMessageBodyFactory CreateMessageBodyFactory()
         {
             return new BondMessageFactory();
@@ -19,12 +30,12 @@ namespace ServiceFabric.Remoting.Bond
 
         public IServiceRemotingRequestMessageBodySerializer CreateRequestMessageSerializer(Type serviceInterfaceType, IEnumerable<Type> methodParameterTypes, IEnumerable<Type> wrappedMessageTypes = null)
         {
-            return new BondRequestMessageBodySerializer();
+            return new BondRequestMessageBodySerializer(this.converterType);
         }
 
         public IServiceRemotingResponseMessageBodySerializer CreateResponseMessageSerializer(Type serviceInterfaceType, IEnumerable<Type> methodParameterTypes, IEnumerable<Type> wrappedMessageTypes = null)
         {
-            return new BondResponseMessageBodySerializer();
+            return new BondResponseMessageBodySerializer(this.converterType);
         }
     }
 }

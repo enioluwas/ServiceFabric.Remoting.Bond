@@ -20,19 +20,18 @@ namespace ServiceFabric.Remoting.Bond
     internal sealed class BondResponseMessageBodyTypeGenerator
     {
         private static int TypeIdCounter;
-        private const string GeneratedTypeSuffix = "_GeneratedResponse";
 
-        public static BondResponseMessageBodyTypeGenerator Instance = new BondResponseMessageBodyTypeGenerator();
+        private const string GeneratedTypeSuffix = "_GeneratedResponse";
 
         private readonly CustomAttributeBuilder bondSchemaCustomAttribute;
         private readonly MethodInfo responseGetMethod;
         private readonly MethodInfo responseSetMethod;
 
-        private BondResponseMessageBodyTypeGenerator()
+        public BondResponseMessageBodyTypeGenerator(Type converterType)
         {
             this.bondSchemaCustomAttribute = new CustomAttributeBuilder(Constants.BondSchemaAttributeConstructor, Array.Empty<object>());
-            this.responseGetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Get));
-            this.responseSetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Set));
+            this.responseGetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Get))!;
+            this.responseSetMethod = typeof(IServiceRemotingResponseMessageBody).GetMethod(nameof(IServiceRemotingResponseMessageBody.Set))!;
         }
 
         public BondGeneratedResponseType Generate(Type responseType)
@@ -42,7 +41,7 @@ namespace ServiceFabric.Remoting.Bond
             var responseField = TypeGeneratorUtils.AddBondProperty(typeBuilder, "Response", responseType, 0);
             this.AddConstructors(typeBuilder, responseField);
             this.AddResponseInterfaceDefinition(typeBuilder, responseField);
-            var generatedType = typeBuilder.CreateType();
+            var generatedType = typeBuilder.CreateType()!;
             var typeInstanceFactory = this.BuildInstanceFactory(generatedType, responseType);
 
             return new BondGeneratedResponseType
@@ -88,7 +87,7 @@ namespace ServiceFabric.Remoting.Bond
 
         private Func<IServiceRemotingResponseMessageBody, object> BuildInstanceFactory(Type generatedType, Type responseType)
         {
-            var generatedTypeConstructor = generatedType.GetConstructor(new[] { responseType });
+            var generatedTypeConstructor = generatedType.GetConstructor(new[] { responseType })!;
 
             var response = Expression.Parameter(typeof(IServiceRemotingResponseMessageBody), "response");
             var getInnerResponse = Expression.Call(response, this.responseGetMethod, Expression.Constant(typeof(object), typeof(Type)));
@@ -170,6 +169,11 @@ namespace ServiceFabric.Remoting.Bond
             getterMethod.Return();
             var getterMethodBuilder = getterMethod.CreateMethod();
             typeBuilder.DefineMethodOverride(getterMethodBuilder, this.responseGetMethod);
+        }
+
+        internal void LoadConverter(Type converterType)
+        {
+            throw new NotImplementedException();
         }
     }
 }
