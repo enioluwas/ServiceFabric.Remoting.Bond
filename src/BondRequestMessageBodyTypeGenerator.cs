@@ -29,7 +29,7 @@ namespace ServiceFabric.Remoting.Bond
         {
             if (converterType != null)
             {
-                this.bondTypeConverterMap = new Dictionary<Type, BondTypeConverter>();
+                this.bondTypeConverterMap = TypeGeneratorUtils.LoadConverters(converterType);
             }
             else
             {
@@ -99,7 +99,8 @@ namespace ServiceFabric.Remoting.Bond
                 parameterTypes: new[] { typeof(int), typeof(string), typeof(Type) },
                 typeBuilder,
                 this.requestGetParameterMethod.Name,
-                MethodAttributes.Public | MethodAttributes.Virtual);
+                MethodAttributes.Public | MethodAttributes.Virtual,
+                doVerify: Constants.VerifyIL);
 
             var labels = new Sigil.Label[generatedFields.Length];
             for (var i = 0; i < labels.Length; i++)
@@ -138,7 +139,8 @@ namespace ServiceFabric.Remoting.Bond
                 parameterTypes: new[] { typeof(int), typeof(string), typeof(object) },
                 typeBuilder,
                 this.requestSetParameterMethod.Name,
-                MethodAttributes.Public | MethodAttributes.Virtual);
+                MethodAttributes.Public | MethodAttributes.Virtual,
+                doVerify: Constants.VerifyIL);
 
             var generatedFieldLabels = new Sigil.Label[generatedFields.Length];
             for (var i = 0; i < generatedFieldLabels.Length; i++)
@@ -218,7 +220,7 @@ namespace ServiceFabric.Remoting.Bond
         private void AddConstructors(TypeBuilder typeBuilder, Type[] requestTypes, FieldBuilder[] generatedFields)
         {
             // Add typed parameter constructor: new Generated(RequestType1 param1, ..., RequestTypeN paramN)
-            var typedConstructor = Emit.BuildConstructor(requestTypes, typeBuilder, MethodAttributes.Public);
+            var typedConstructor = Emit.BuildConstructor(requestTypes, typeBuilder, MethodAttributes.Public, doVerify: Constants.VerifyIL);
             for (int i = 0; i < generatedFields.Length; i++)
             {
                 typedConstructor.LoadArgument(0);
@@ -233,7 +235,8 @@ namespace ServiceFabric.Remoting.Bond
             var untypedConstructor = Emit.BuildConstructor(
                 generatedFields.Select(_ => typeof(object)).ToArray(),
                 typeBuilder,
-                MethodAttributes.Public);
+                MethodAttributes.Public,
+                doVerify: Constants.VerifyIL);
 
             for (int i = 0; i < generatedFields.Length; i++)
             {

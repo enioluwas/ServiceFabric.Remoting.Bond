@@ -22,11 +22,12 @@ namespace ServiceFabric.Remoting.Bond
 
             // Define the "get" accessor method for the property.
             var getterMethod = Emit.BuildInstanceMethod(
-                propType,
+                bondPropType,
                 Type.EmptyTypes,
                 typeBuilder,
                 $"get_{propName}",
-                Constants.PropertyMethodAttributes);
+                Constants.PropertyMethodAttributes,
+                doVerify: Constants.VerifyIL);
             getterMethod.LoadArgument(0);
             getterMethod.LoadField(backingFieldBuilder);
 
@@ -43,10 +44,11 @@ namespace ServiceFabric.Remoting.Bond
             // Define the "set" accessor method for the property.
             var setterMethod = Emit.BuildInstanceMethod(
                 typeof(void),
-                new[] { propType },
+                new[] { bondPropType },
                 typeBuilder,
                 $"set_{propName}",
-                Constants.PropertyMethodAttributes);
+                Constants.PropertyMethodAttributes,
+                doVerify: Constants.VerifyIL);
             setterMethod.LoadArgument(0);
             setterMethod.LoadArgument(1);
 

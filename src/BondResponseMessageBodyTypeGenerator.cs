@@ -33,7 +33,7 @@ namespace ServiceFabric.Remoting.Bond
         {
             if (converterType != null)
             {
-                this.bondTypeConverterMap = new Dictionary<Type, BondTypeConverter>();
+                this.bondTypeConverterMap = TypeGeneratorUtils.LoadConverters(converterType);
             }
             else
             {
@@ -69,7 +69,7 @@ namespace ServiceFabric.Remoting.Bond
             var responseType = responseField.FieldType;
 
             // Add typed parameter constructor: new Generated(ResponseType response)
-            var typedConstructor = Emit.BuildConstructor(new[] { responseType }, typeBuilder, MethodAttributes.Public);
+            var typedConstructor = Emit.BuildConstructor(new[] { responseType }, typeBuilder, MethodAttributes.Public, doVerify: Constants.VerifyIL);
             typedConstructor.LoadArgument(0);
             typedConstructor.LoadArgument(1);
             typedConstructor.StoreField(responseField);
@@ -77,7 +77,7 @@ namespace ServiceFabric.Remoting.Bond
             typedConstructor.CreateConstructor();
 
             // Add untyped parameter constructor: new Generated(object response)
-            var untypedConstructor = Emit.BuildConstructor(new[] { typeof(object) }, typeBuilder, MethodAttributes.Public);
+            var untypedConstructor = Emit.BuildConstructor(new[] { typeof(object) }, typeBuilder, MethodAttributes.Public, doVerify: Constants.VerifyIL);
             untypedConstructor.LoadArgument(0);
             untypedConstructor.LoadArgument(1);
             if (!responseType.IsClass)
@@ -139,7 +139,8 @@ namespace ServiceFabric.Remoting.Bond
                 parameterTypes: new[] { typeof(object) },
                 typeBuilder,
                 name: this.responseSetMethod.Name,
-                attributes: MethodAttributes.Public | MethodAttributes.Virtual);
+                attributes: MethodAttributes.Public | MethodAttributes.Virtual,
+                doVerify: Constants.VerifyIL);
 
             setterMethod.LoadArgument(0);
             setterMethod.LoadArgument(1);
@@ -167,7 +168,8 @@ namespace ServiceFabric.Remoting.Bond
                 parameterTypes: new[] { typeof(Type) },
                 typeBuilder,
                 name: this.responseGetMethod.Name,
-                attributes: MethodAttributes.Public | MethodAttributes.Virtual);
+                attributes: MethodAttributes.Public | MethodAttributes.Virtual,
+                doVerify: Constants.VerifyIL);
 
             getterMethod.LoadArgument(0);
             getterMethod.LoadField(responseField);
