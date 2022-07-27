@@ -17,24 +17,24 @@ namespace ServiceFabric.Remoting.Bond
     internal class BondResponseMessageBodySerializer : IServiceRemotingResponseMessageBodySerializer
     {
         private readonly BondResponseMessageBodyTypeGenerator typeGenerator;
-        private readonly Serializer<CompactBinaryWriter<OutputBuffer>> serializer;
-        private readonly Deserializer<CompactBinaryReader<InputStream>> deserializer;
+        private readonly Serializer<FastBinaryWriter<OutputBuffer>> serializer;
+        private readonly Deserializer<FastBinaryReader<InputStream>> deserializer;
         private readonly ConcurrentDictionary<ResponseCacheKey, BondGeneratedResponseType> generatedTypeCache;
 
         public BondResponseMessageBodySerializer(Type converterType)
         {
             this.typeGenerator = new BondResponseMessageBodyTypeGenerator(converterType);
-            this.serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(typeof(BondResponseMessageMetadata));
-            this.deserializer = new Deserializer<CompactBinaryReader<InputStream>>(typeof(BondResponseMessageMetadata));
+            this.serializer = new Serializer<FastBinaryWriter<OutputBuffer>>(typeof(BondResponseMessageMetadata));
+            this.deserializer = new Deserializer<FastBinaryReader<InputStream>>(typeof(BondResponseMessageMetadata));
             this.generatedTypeCache = new ConcurrentDictionary<ResponseCacheKey, BondGeneratedResponseType>();
         }
 
         public IServiceRemotingResponseMessageBody Deserialize(IIncomingMessageBody messageBody)
         {
-            var wrappedReader = new CompactBinaryReader<InputStream>(new InputStream(messageBody.GetReceivedBuffer(), 1024));
+            var wrappedReader = new FastBinaryReader<InputStream>(new InputStream(messageBody.GetReceivedBuffer(), 1024));
             var wrappedMessage = this.deserializer.Deserialize<BondResponseMessageMetadata>(wrappedReader);
 
-            if (wrappedMessage.ReturnTypeName == Constants.VoidTypeName)
+            if (wrappedMessage == null || wrappedMessage.ReturnTypeName == Constants.VoidTypeName)
             {
                 return new BondEmptyResponseMessageBody();
             }
@@ -46,12 +46,17 @@ namespace ServiceFabric.Remoting.Bond
             };
 
             var generatedType = this.GetOrAddGeneratedType(cacheKey);
-            var innerReader = new CompactBinaryReader<InputBuffer>(new InputBuffer(wrappedMessage.Payload));
+            var innerReader = new FastBinaryReader<InputBuffer>(new InputBuffer(wrappedMessage.Payload));
             return generatedType.Deserializer.Deserialize<IServiceRemotingResponseMessageBody>(innerReader);
         }
 
         public IOutgoingMessageBody Serialize(IServiceRemotingResponseMessageBody serviceRemotingResponseMessageBody)
         {
+            if (serviceRemotingResponseMessageBody == null)
+            {
+                return null;
+            }
+
             var bondMessageBody = (BondResponseMessageBody)serviceRemotingResponseMessageBody;
 
             if (bondMessageBody.ReturnTypeName == Constants.VoidTypeName)
@@ -63,7 +68,7 @@ namespace ServiceFabric.Remoting.Bond
                 };
 
                 var buffer = new OutputBuffer(256);
-                var writer = new CompactBinaryWriter<OutputBuffer>(buffer);
+                var writer = new FastBinaryWriter<OutputBuffer>(buffer);
                 this.serializer.Serialize(message, writer);
                 return new OutgoingMessageBody(new[] { buffer.Data });
             }
@@ -77,7 +82,7 @@ namespace ServiceFabric.Remoting.Bond
             var generatedType = this.GetOrAddGeneratedType(cacheKey);
             var innerMessage = generatedType.InstanceFactory(bondMessageBody);
             var innerBuffer = new OutputBuffer(1024);
-            var innerMessageWriter = new CompactBinaryWriter<OutputBuffer>(innerBuffer);
+            var innerMessageWriter = new FastBinaryWriter<OutputBuffer>(innerBuffer);
             generatedType.Serializer.Serialize(innerMessage, innerMessageWriter);
 
             var wrappedMessage = new BondResponseMessageMetadata
@@ -88,7 +93,7 @@ namespace ServiceFabric.Remoting.Bond
             };
 
             var wrappedBuffer = new OutputBuffer(innerBuffer.Data.Count + 1024);
-            var wrappedWriter = new CompactBinaryWriter<OutputBuffer>(wrappedBuffer);
+            var wrappedWriter = new FastBinaryWriter<OutputBuffer>(wrappedBuffer);
             this.serializer.Serialize(wrappedMessage, wrappedWriter);
             return new OutgoingMessageBody(new[] { wrappedBuffer.Data });
         }

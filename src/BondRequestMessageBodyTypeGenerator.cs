@@ -55,8 +55,8 @@ namespace ServiceFabric.Remoting.Bond
             {
                 Type = generatedType,
                 InstanceFactory = typeInstanceFactory,
-                Serializer = new Serializer<CompactBinaryWriter<OutputBuffer>>(generatedType),
-                Deserializer = new Deserializer<CompactBinaryReader<InputBuffer>>(generatedType),
+                Serializer = new Serializer<FastBinaryWriter<OutputBuffer>>(generatedType),
+                Deserializer = new Deserializer<FastBinaryReader<InputBuffer>>(generatedType),
             };
         }
 

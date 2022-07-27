@@ -16,7 +16,7 @@ namespace ServiceFabric.Remoting.Bond
     {
         public Type Type { get; init; }
         public Func<IServiceRemotingResponseMessageBody, object> InstanceFactory { get; init; }
-        public Deserializer<CompactBinaryReader<InputBuffer>> Deserializer { get; init; }
-        public Serializer<CompactBinaryWriter<OutputBuffer>> Serializer { get; init; }
+        public Deserializer<FastBinaryReader<InputBuffer>> Deserializer { get; init; }
+        public Serializer<FastBinaryWriter<OutputBuffer>> Serializer { get; init; }
     }
 }
