@@ -190,7 +190,7 @@ namespace ServiceFabric.Remoting.Bond
                 // Remove generic generatedType annotation, e.g from "Dictionary`2"
                 if (typeName.Length > 2 && typeName[^2] == '`')
                 {
-                    typeNameBuilder.Append(typeName[0..^3]);
+                    typeNameBuilder.Append(typeName[0..^2]);
                 }
                 else
                 {
